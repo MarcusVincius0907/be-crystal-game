@@ -1,7 +1,14 @@
 import { User } from "./User";
 
+export enum Round {
+  FIRST = 1,
+  SECOND = 2,
+  THIRD = 3,
+  FOURTH = 4,
+}
 export interface Match {
   _id?: string;
+  round: Round;
   users: User[];
   panels: Panel[];
 }
@@ -17,7 +24,7 @@ export interface Board {
 }
 
 export interface Block {
-  id: string;
+  _id?: string;
   value: string;
   action: string;
 }

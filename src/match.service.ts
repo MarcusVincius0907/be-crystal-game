@@ -1,84 +1,175 @@
 import { v4 as uuidv4 } from "uuid";
 import { User } from "./models/User";
-import { Block, Board, Match } from "./models/Match";
+import { Match, Round } from "./models/Match";
 import { Injectable } from "@nestjs/common";
-import { PRIZES } from "./constants";
 import { InjectModel } from "@nestjs/mongoose";
 import { Model } from "mongoose";
 import { Match as MatchSchema } from "./modules/database/schemas/Match";
-import { shuffleArray } from "./utils";
+import { generateMatch } from "./utils/match.utils";
 
 @Injectable()
 export class MatchService {
   private queue: User[] = [];
-  private matches: Map<string, boolean> = new Map();
+  private matches: Map<string, string> = new Map();
 
   constructor(
     @InjectModel(MatchSchema.name)
     private readonly model: Model<Match>,
   ) {}
 
-  findMatch(user: User) {
-    const userId = uuidv4();
-    const userWithId = { ...user, id: userId };
+  async findMatch(user: User) {
+    const ownerId = uuidv4();
+    const userWithId = { ...user, ownerId };
 
     this.queue.push(userWithId);
 
     if (this.queue.length >= 2) {
       const [player1, player2] = this.queue.splice(0, 2);
-      const match = this.generateMatch(player1, player2);
+      const match = generateMatch(player1, player2);
+      let matchId = "";
 
       try {
-        this.model.create(match);
+        const matchCreated = await this.model.create(match);
+        matchId = matchCreated._id;
       } catch (e) {
         console.log(e);
       }
 
-      this.matches.set(player1.id || "", true);
-      this.matches.set(player2.id || "", true);
+      this.matches.set(player1.ownerId || "", matchId);
+      this.matches.set(player2.ownerId || "", matchId);
     }
 
-    return userId;
+    return ownerId;
   }
 
-  getMatchStatus(userId: string): boolean | null {
-    return this.matches.get(userId) || null;
+  /* 
+    Returns match id
+  */
+  getMatchStatus(ownerId: string): string | null {
+    return this.matches.get(ownerId) || null;
   }
 
   async getMatches() {
     return await this.model.find().exec();
   }
 
-  private generateMatch(player1: User, player2: User): Match {
-    return {
-      users: [player1, player2],
-      panels: [
-        this.generatePanels(player1.id ?? ""),
-        this.generatePanels(player2.id ?? ""),
-      ],
-    };
+  async deleteById(id: string) {
+    return await this.model.deleteOne({ _id: id }).exec();
   }
 
-  private generateBlocks(prizes: string[]): Block[] {
-    return prizes.map((prize) => {
-      return { id: uuidv4(), value: prize, action: "" };
-    });
-  }
+  async getMatchById(id: string, ownerId: string) {
+    const match = await this.model.findById({ _id: id }).exec();
 
-  private generateBoards(): Board[] {
-    const prizes: string[] = shuffleArray(PRIZES) as string[];
-    const newPrizes: string[][] = [
-      prizes.slice(0, 9), // First 9 elements
-      prizes.slice(9, 18), // Next 9 elements
-      prizes.slice(18, 27), // Last 9 elements
-    ];
-    return Array.from({ length: 3 }).map(() => {
-      const prizeSet = newPrizes.pop() || [];
-      return { blocks: this.generateBlocks(prizeSet) };
-    }) as Board[];
-  }
+    if (!match) {
+      return null;
+    }
 
-  private generatePanels(ownerId: string) {
-    return { ownerId, boards: this.generateBoards() };
+    const userPanel = match.panels.find((panel) => panel.ownerId === ownerId);
+
+    const oponentPanel = match.panels.find(
+      (panel) => panel.ownerId !== ownerId,
+    );
+
+    //check round
+    if (match.round === Round.FIRST) {
+      userPanel?.boards.forEach((board) => {
+        //hide all boards
+        board.blocks.forEach((block, i, arr) => {
+          arr[i].value = "";
+        });
+      });
+
+      oponentPanel?.boards.forEach((board, boardIndex) => {
+        //hide 2nd and 3rd board
+        if (boardIndex !== 0) {
+          board.blocks.forEach((block, i, arr) => {
+            arr[i].value = "";
+          });
+        }
+      });
+
+      const newMatch = {
+        panels: [
+          {
+            boards: oponentPanel?.boards,
+          },
+          {
+            boards: userPanel?.boards,
+          },
+        ],
+      };
+
+      return newMatch;
+    } else if (match.round === Round.SECOND) {
+      //hide user prizes
+      userPanel?.boards.forEach((board, boardIndex) => {
+        //hide 2nd and 3rd board
+        if (boardIndex > 0) {
+          board.blocks.forEach((block, i, arr) => {
+            arr[i].value = "";
+          });
+        }
+      });
+
+      oponentPanel?.boards.forEach((board, boardIndex) => {
+        //hide 3rd board
+        if (boardIndex === 2) {
+          board.blocks.forEach((block, i, arr) => {
+            arr[i].value = "";
+          });
+        }
+      });
+
+      const newMatch = {
+        panels: [
+          {
+            boards: oponentPanel?.boards,
+          },
+          {
+            boards: userPanel?.boards,
+          },
+        ],
+      };
+
+      return newMatch;
+    } else if (match.round === Round.THIRD) {
+      userPanel?.boards.forEach((board, boardIndex) => {
+        //hide 3rd board
+        if (boardIndex === 2) {
+          board.blocks.forEach((block, i, arr) => {
+            arr[i].value = "";
+          });
+        }
+      });
+
+      //show all oponent prizes
+
+      const newMatch = {
+        panels: [
+          {
+            boards: oponentPanel?.boards,
+          },
+          {
+            boards: userPanel?.boards,
+          },
+        ],
+      };
+
+      return newMatch;
+    } else if (match.round === Round.FOURTH) {
+      //show all prizes
+      const newMatch = {
+        panels: [
+          {
+            boards: oponentPanel?.boards,
+          },
+          {
+            boards: userPanel?.boards,
+          },
+        ],
+      };
+
+      return newMatch;
+    }
   }
 }

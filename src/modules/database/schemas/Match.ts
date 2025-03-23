@@ -5,6 +5,9 @@ import { Document } from "mongoose";
 export class User {
   @Prop({ required: true })
   name: string;
+
+  @Prop({ required: true })
+  ownerId: string;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
@@ -49,6 +52,9 @@ export class Match extends Document {
 
   @Prop({ type: [PanelSchema], required: true })
   panels: Panel[];
+
+  @Prop({ type: Number, required: true })
+  round: number;
 }
 
 export const MatchSchema = SchemaFactory.createForClass(Match);

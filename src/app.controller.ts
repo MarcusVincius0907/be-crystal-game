@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Post } from "@nestjs/common";
 import { AppService } from "./app.service";
 import { User } from "./models/User";
 import { MatchService } from "./match.service";
@@ -11,23 +11,48 @@ export class AppController {
   ) {}
 
   @Post("find-match")
-  findMatch(@Body() user: User) {
-    const userId = this.matchService.findMatch(user);
-    return { userId };
+  async findMatch(@Body() user: User) {
+    const ownerId = await this.matchService.findMatch(user);
+    return { ownerId };
   }
 
-  @Get("status/:userId")
-  getMatchStatus(@Param("userId") userId: string) {
-    const match = this.matchService.getMatchStatus(userId);
-    if (!match) {
+  @Get("status/:ownerId")
+  getMatchStatus(@Param("ownerId") ownerId: string) {
+    const matchId = this.matchService.getMatchStatus(ownerId);
+    if (!matchId) {
       return { status: "waiting" };
     }
-    return { status: "matched", match };
+    return { status: "matched", matchId };
   }
 
   @Get("matches")
   async getMatches() {
     const match = await this.matchService.getMatches();
     return { match };
+  }
+
+  @Delete("match/:id")
+  async deleteMatch(@Param("id") id: string) {
+    try {
+      const resp = await this.matchService.deleteById(id);
+      return { status: "success", data: resp };
+    } catch (e) {
+      console.log(e);
+      return { status: "failed" };
+    }
+  }
+
+  @Get("match/:id/:ownerId")
+  async getMatchById(
+    @Param("id") id: string,
+    @Param("ownerId") ownerId: string,
+  ) {
+    try {
+      const resp = await this.matchService.getMatchById(id, ownerId);
+      return { status: "success", data: resp };
+    } catch (e) {
+      console.log(e);
+      return { status: "failed" };
+    }
   }
 }
