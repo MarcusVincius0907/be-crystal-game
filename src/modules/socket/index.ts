@@ -15,6 +15,7 @@ import { Server, Socket } from "socket.io";
 export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer() server: Server;
   private playersInRoom: Map<string, string[]> = new Map(); // Map roomId to player socketIds
+  private playersReady: Map<string, Map<string, boolean>> = new Map(); // Map roomId to player socketIds
 
   // Called when a player connects
   handleConnection(client: Socket) {
@@ -80,8 +81,24 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   // Send game update to players in a room
   @SubscribeMessage("gameUpdate")
   sendGameUpdate(
-    @MessageBody() { roomId, update }: { roomId: string; update: string },
+    @MessageBody()
+    {
+      roomId,
+      ownerId,
+      update,
+    }: {
+      roomId: string;
+      ownerId: string;
+      update: string;
+    },
   ): void {
-    this.server.to(roomId).emit("gameUpdate", update);
+    if (!this.playersReady.has(roomId)) {
+      this.playersReady.set(roomId, new Map([[ownerId, true]]));
+    } else {
+      if (!this.playersReady.get(roomId)?.get(ownerId)) {
+        this.server.to(roomId).emit("gameUpdate", update);
+        this.playersReady.clear();
+      }
+    }
   }
 }

@@ -87,19 +87,6 @@ export class MatchService {
           });
         }
       });
-
-      const newMatch = {
-        panels: [
-          {
-            boards: oponentPanel?.boards,
-          },
-          {
-            boards: userPanel?.boards,
-          },
-        ],
-      };
-
-      return newMatch;
     } else if (match.round === Round.SECOND) {
       //hide user prizes
       userPanel?.boards.forEach((board, boardIndex) => {
@@ -119,19 +106,6 @@ export class MatchService {
           });
         }
       });
-
-      const newMatch = {
-        panels: [
-          {
-            boards: oponentPanel?.boards,
-          },
-          {
-            boards: userPanel?.boards,
-          },
-        ],
-      };
-
-      return newMatch;
     } else if (match.round === Round.THIRD) {
       userPanel?.boards.forEach((board, boardIndex) => {
         //hide 3rd board
@@ -143,33 +117,21 @@ export class MatchService {
       });
 
       //show all oponent prizes
-
-      const newMatch = {
-        panels: [
-          {
-            boards: oponentPanel?.boards,
-          },
-          {
-            boards: userPanel?.boards,
-          },
-        ],
-      };
-
-      return newMatch;
     } else if (match.round === Round.FOURTH) {
       //show all prizes
-      const newMatch = {
-        panels: [
-          {
-            boards: oponentPanel?.boards,
-          },
-          {
-            boards: userPanel?.boards,
-          },
-        ],
-      };
-
-      return newMatch;
     }
+
+    const newMatch = {
+      panels: [
+        {
+          boards: oponentPanel?.boards,
+        },
+        {
+          boards: userPanel?.boards,
+        },
+      ],
+    };
+
+    return newMatch;
   }
 }
