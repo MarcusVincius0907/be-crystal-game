@@ -11,9 +11,11 @@ export interface Match {
   round: Round;
   users: User[];
   panels: Panel[];
+  firstHalf: boolean;
 }
 
 export interface Panel {
+  _id?: string;
   active?: boolean;
   ownerId: string;
   boards: Board[];

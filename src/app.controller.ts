@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Post, Put } from "@nestjs/common";
 import { AppService } from "./app.service";
 import { User } from "./models/User";
 import { MatchService } from "./match.service";
@@ -50,6 +50,17 @@ export class AppController {
     try {
       const resp = await this.matchService.getMatchById(id, ownerId);
       return { status: "success", data: resp };
+    } catch (e) {
+      console.log(e);
+      return { status: "failed" };
+    }
+  }
+
+  @Put("change-first-half/:id")
+  async changeFirstHalf(@Param("id") id: string) {
+    try {
+      await this.matchService.changeFirstHalf(id);
+      return { status: "success" };
     } catch (e) {
       console.log(e);
       return { status: "failed" };

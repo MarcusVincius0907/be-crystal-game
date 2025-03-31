@@ -10,12 +10,15 @@ import {
 } from "@nestjs/websockets";
 import { WebSocketServer } from "@nestjs/websockets";
 import { Server, Socket } from "socket.io";
+import { MatchService } from "src/match.service";
 
 @WebSocketGateway(3001, { transports: ["websocket"] })
 export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
+  constructor(private readonly matchService: MatchService) {}
+
   @WebSocketServer() server: Server;
   private playersInRoom: Map<string, string[]> = new Map(); // Map roomId to player socketIds
-  private playersReady: Map<string, Map<string, boolean>> = new Map(); // Map roomId to player socketIds
+  private playersReady: Map<string, Map<string, any>> = new Map(); // Map roomId to player socketIds
 
   // Called when a player connects
   handleConnection(client: Socket) {
@@ -80,7 +83,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   // Send game update to players in a room
   @SubscribeMessage("gameUpdate")
-  sendGameUpdate(
+  async sendGameUpdate(
     @MessageBody()
     {
       roomId,
@@ -91,13 +94,21 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       ownerId: string;
       update: string;
     },
-  ): void {
+  ) {
     if (!this.playersReady.has(roomId)) {
-      this.playersReady.set(roomId, new Map([[ownerId, true]]));
+      this.playersReady.set(roomId, new Map([[ownerId, update]]));
     } else {
       if (!this.playersReady.get(roomId)?.get(ownerId)) {
+        await this.matchService.changeFirstHalf(roomId);
+        const opponentActions = (this.playersReady.get(roomId) || new Map([]))
+          .values()
+          .next().value;
+        await this.matchService.updateBlocksWithAction(roomId, [
+          ...update,
+          ...opponentActions,
+        ]);
         this.server.to(roomId).emit("gameUpdate", update);
-        this.playersReady.clear();
+        this.playersReady.delete(roomId);
       }
     }
   }

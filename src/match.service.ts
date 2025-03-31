@@ -122,6 +122,11 @@ export class MatchService {
     }
 
     const newMatch = {
+      round: match.round,
+      users: match.users.map((user) => ({
+        name: user.name,
+      })),
+      firstHalf: match.firstHalf,
       panels: [
         {
           boards: oponentPanel?.boards,
@@ -133,5 +138,45 @@ export class MatchService {
     };
 
     return newMatch;
+  }
+
+  async changeFirstHalf(id: string) {
+    const match = await this.model.findById({ _id: id }).exec();
+    if (!match) {
+      return null;
+    }
+
+    if (match.firstHalf === false) {
+      match.round = match.round + 1;
+    }
+
+    match.firstHalf = !match.firstHalf;
+
+    return await this.model.findByIdAndUpdate(id, match).exec();
+  }
+
+  async updateBlocksWithAction(
+    id: string,
+    data: { _id: string; action: string }[],
+  ) {
+    const match = await this.model.findById({ _id: id }).exec();
+    if (!match) {
+      return null;
+    }
+
+    //brutal force
+    match.panels.forEach((panel) => {
+      panel.boards.forEach((board) => {
+        board.blocks.forEach((block, i, arr) => {
+          data.forEach((d) => {
+            if (block._id?.toString() === d._id) {
+              arr[i].action = d.action;
+            }
+          });
+        });
+      });
+    });
+
+    return await this.model.findByIdAndUpdate(id, match).exec();
   }
 }

@@ -7,9 +7,10 @@ export function generateMatch(player1: User, player2: User): Match {
   return {
     round: 1,
     users: [player1, player2],
+    firstHalf: true,
     panels: [
-      generatePanels(player1.ownerId ?? ""),
-      generatePanels(player2.ownerId ?? ""),
+      generatePanels(player1.ownerId ?? "", true),
+      generatePanels(player2.ownerId ?? "", false),
     ],
   };
 }
@@ -33,6 +34,6 @@ export function generateBoards(): Board[] {
   }) as Board[];
 }
 
-export function generatePanels(ownerId: string) {
-  return { ownerId, boards: generateBoards() };
+export function generatePanels(ownerId: string, active: boolean) {
+  return { ownerId, boards: generateBoards(), active };
 }

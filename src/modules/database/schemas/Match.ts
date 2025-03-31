@@ -33,7 +33,7 @@ export const BoardSchema = SchemaFactory.createForClass(Board);
 
 @Schema()
 export class Panel {
-  @Prop({ required: false })
+  @Prop({ required: false, default: false })
   active: boolean;
 
   @Prop({ required: true })
@@ -55,6 +55,9 @@ export class Match extends Document {
 
   @Prop({ type: Number, required: true })
   round: number;
+
+  @Prop({ type: Boolean, required: true, default: true })
+  firstHalf: number;
 }
 
 export const MatchSchema = SchemaFactory.createForClass(Match);
