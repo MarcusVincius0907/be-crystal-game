@@ -10,7 +10,7 @@ import {
 } from "@nestjs/websockets";
 import { WebSocketServer } from "@nestjs/websockets";
 import { Server, Socket } from "socket.io";
-import { MatchService } from "src/match.service";
+import { MatchService } from "src/modules/match/match.service";
 
 @WebSocketGateway(3001, { transports: ["websocket"] })
 export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {

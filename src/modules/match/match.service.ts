@@ -1,11 +1,11 @@
 import { v4 as uuidv4 } from "uuid";
-import { User } from "./models/User";
-import { Match, Round } from "./models/Match";
+import { User } from "../../models/User";
+import { Match, Round } from "../../models/Match";
 import { Injectable } from "@nestjs/common";
 import { InjectModel } from "@nestjs/mongoose";
 import { Model } from "mongoose";
-import { Match as MatchSchema } from "./modules/database/schemas/Match";
-import { generateMatch } from "./utils/match.utils";
+import { Match as MatchSchema } from "../database/schemas/Match";
+import { generateMatch } from "../../utils/match.utils";
 
 @Injectable()
 export class MatchService {
