@@ -8,6 +8,9 @@ export class User {
 
   @Prop({ required: true })
   ownerId: string;
+
+  @Prop({ required: true, default: 0 })
+  score: number;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

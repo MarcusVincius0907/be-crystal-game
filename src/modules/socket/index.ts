@@ -99,7 +99,6 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.playersReady.set(roomId, new Map([[ownerId, update]]));
     } else {
       if (!this.playersReady.get(roomId)?.get(ownerId)) {
-        await this.matchService.changeFirstHalf(roomId);
         const opponentActions = (this.playersReady.get(roomId) || new Map([]))
           .values()
           .next().value;
@@ -107,6 +106,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
           ...update,
           ...opponentActions,
         ]);
+        await this.matchService.changeFirstHalf(roomId);
         this.server.to(roomId).emit("gameUpdate", update);
         this.playersReady.delete(roomId);
       }

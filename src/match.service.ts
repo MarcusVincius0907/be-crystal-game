@@ -19,12 +19,26 @@ export class MatchService {
 
   async findMatch(user: User) {
     const ownerId = uuidv4();
-    const userWithId = { ...user, ownerId };
+    const userWithId = { ...user, ownerId, date: new Date() };
+
+    if (this.queue.length === 1) {
+      const user = this.queue[0];
+      const userDate = user?.date || new Date();
+      const currentDate = new Date();
+      const diff = Math.abs(userDate.getTime() - currentDate.getTime());
+      const diffHours = Math.ceil(diff / (1000 * 60 * 60));
+
+      if (diffHours > 1) {
+        //we should clean the queue
+        this.queue = [];
+      }
+    }
 
     this.queue.push(userWithId);
 
-    if (this.queue.length >= 2) {
+    if (this.queue.length === 2) {
       const [player1, player2] = this.queue.splice(0, 2);
+
       const match = generateMatch(player1, player2);
       let matchId = "";
 
@@ -37,6 +51,8 @@ export class MatchService {
 
       this.matches.set(player1.ownerId || "", matchId);
       this.matches.set(player2.ownerId || "", matchId);
+
+      this.queue = [];
     }
 
     return ownerId;
@@ -119,12 +135,17 @@ export class MatchService {
       //show all oponent prizes
     } else if (match.round === Round.FOURTH) {
       //show all prizes
+      match.users.forEach((user) => {
+        this.matches.delete(ownerId);
+      });
     }
 
     const newMatch = {
       round: match.round,
       users: match.users.map((user) => ({
+        id: user.ownerId === ownerId ? ownerId : "",
         name: user.name,
+        score: user.score,
       })),
       firstHalf: match.firstHalf,
       panels: [
@@ -147,6 +168,7 @@ export class MatchService {
     }
 
     if (match.firstHalf === false) {
+      this.calcScore(match);
       match.round = match.round + 1;
     }
 
@@ -164,7 +186,7 @@ export class MatchService {
       return null;
     }
 
-    //brutal force
+    //brutal force, we can sort based on round
     match.panels.forEach((panel) => {
       panel.boards.forEach((board) => {
         board.blocks.forEach((block, i, arr) => {
@@ -178,5 +200,44 @@ export class MatchService {
     });
 
     return await this.model.findByIdAndUpdate(id, match).exec();
+  }
+
+  private calcScore(match: Match) {
+    const score: Map<string, number> = new Map();
+
+    const playerA = match.panels[0].ownerId;
+    const playerB = match.panels[1].ownerId;
+
+    //brutal force, we can sort based on round
+    match.panels.forEach((panel) => {
+      panel.boards[match.round - 1].blocks.forEach((block) => {
+        if (block.action === "selected") {
+          if (score.has(panel.ownerId)) {
+            score.set(
+              panel.ownerId,
+              (score.get(panel.ownerId) || 0) + Number(block.value),
+            );
+          } else {
+            score.set(panel.ownerId, Number(block.value));
+          }
+        }
+
+        if (block.action === "rob") {
+          if (panel.ownerId === playerA) {
+            score.set(playerB, (score.get(playerB) || 0) + Number(block.value));
+          } else {
+            score.set(playerA, (score.get(playerA) || 0) + Number(block.value));
+          }
+        }
+      });
+    });
+
+    match.users.forEach((user, i, arr) => {
+      if (score.has(user.ownerId || "")) {
+        arr[i].score = user.score + (score.get(user.ownerId || "") || 0);
+      }
+    });
+
+    return score;
   }
 }
